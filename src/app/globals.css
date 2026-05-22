@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --nestfind-green: #2d9c75;
+  --nestfind-green-dark: #238f68;
+  --nestfind-hero: #e1f5ee;
+  --nestfind-mint: #e8f7f0;
+  --nestfind-heading: #1e4d3b;
 }
 
 @theme inline {
@@ -12,15 +17,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-zinc-200;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-white text-zinc-900 antialiased;
+  }
 }

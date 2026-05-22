@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum ListingStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CardAccent {
+  blue
+  green
+  yellow
+  pink
+}
+
+// ─── Lookup tables ───────────────────────────────────────────────────────────
+
+model City {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  country   String   @default("VN") @db.Char(2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  districts  District[]
+  properties Property[]
+
+  @@map("cities")
+}
+
+model District {
+  id        String   @id @default(cuid())
+  cityId    String   @map("city_id")
+  name      String
+  slug      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  city       City       @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  properties Property[]
+
+  @@unique([cityId, slug])
+  @@index([cityId])
+  @@map("districts")
+}
+
+model PropertyType {
+  id          String   @id @default(cuid())
+  code        String   @unique // STUDIO | APARTMENT | HOUSE
+  name        String
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  properties Property[]
+
+  @@map("property_types")
+}
+
+// ─── Core listing ────────────────────────────────────────────────────────────
+
+model Property {
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @db.Text
+  cityId         String        @map("city_id")
+  districtId     String?       @map("district_id")
+  propertyTypeId String        @map("property_type_id")
+  beds           Int
+  baths          Int
+  maxGuests      Int           @map("max_guests")
+  rating         Decimal       @db.Decimal(2, 1)
+  status         ListingStatus @default(ACTIVE)
+  isNew          Boolean       @default(false) @map("is_new")
+  isTopPick      Boolean       @default(false) @map("is_top_pick")
+  featured       Boolean       @default(false)
+  cardAccent     CardAccent?   @map("card_accent")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  city         City             @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  district     District?        @relation(fields: [districtId], references: [id], onDelete: SetNull)
+  propertyType PropertyType     @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
+  images       PropertyImage[]
+  pricing      PropertyPricing?
+
+  @@index([cityId])
+  @@index([districtId])
+  @@index([propertyTypeId])
+  @@index([status])
+  @@index([featured])
+  @@index([rating])
+  @@index([maxGuests])
+  @@index([cityId, propertyTypeId, status])
+  @@index([status, featured, rating(sort: Desc)])
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String   @map("property_id")
+  url        String
+  alt        String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@index([propertyId, isPrimary])
+  @@map("property_images")
+}
+
+model PropertyPricing {
+  id            String   @id @default(cuid())
+  propertyId    String   @unique @map("property_id")
+  pricePerNight Int      @map("price_per_night")
+  currency      String   @default("USD") @db.Char(3)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([pricePerNight])
+  @@index([currency, pricePerNight])
+  @@map("property_pricing")
+}
+
+// ─── AI agent monitoring (production observability) ─────────────────────────
+
+enum AiProvider {
+  RULES
+  OPENAI
+}
+
+model AiAgentEvent {
+  id                 String     @id @default(cuid())
+  route              String     @default("/api/ai/search")
+  provider           AiProvider
+  latencyMs          Int        @map("latency_ms")
+  success            Boolean
+  validationPassed   Boolean    @map("validation_passed")
+  usedFallback       Boolean    @default(false) @map("used_fallback")
+  confidence         Decimal?   @db.Decimal(3, 2)
+  promptLength       Int        @map("prompt_length")
+  listingsReturned   Int        @default(0) @map("listings_returned")
+  errorCode          String?    @map("error_code")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([provider, createdAt])
+  @@index([success, createdAt])
+  @@map("ai_agent_events")
+}
