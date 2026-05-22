@@ -369,7 +369,7 @@ This repository is structured so **coding agents** (Cursor, Copilot, Claude Code
 | Task type | Start here |
 |-----------|------------|
 | API / DB / services | [docs/BACKEND.md](docs/BACKEND.md), `prisma/schema.prisma` |
-| UI / components | [FRONTEND.md](FRONTEND.md), `src/components/features/` |
+| UI / components | [docs/FRONTEND.md](FRONTEND.md), `src/components/features/` |
 | Tests / regressions | [e2e/README.md](e2e/README.md), `e2e/utils/selectors.ts` |
 
 ### 2. Respect layer boundaries
